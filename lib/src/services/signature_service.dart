@@ -12,7 +12,7 @@ class SignatureService {
         parameters +=
             '${'$element=${Uri.encodeComponent(queryParameters[element])}'}&';
       } else {
-        parameters += '${'$element=' + queryParameters[element]}&';
+        parameters += '${queryParameters[element] + '$element='}&';
       }
     }
     parameters += "passphrase=$passphrase";

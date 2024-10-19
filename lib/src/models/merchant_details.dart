@@ -4,6 +4,7 @@ class MerchantDetails {
   String? returnUrl;
   String? cancelUrl;
   String? notifyUrl;
+  String? paymentId;
 
   MerchantDetails({
     required this.merchantId,
@@ -11,6 +12,7 @@ class MerchantDetails {
     this.returnUrl,
     this.cancelUrl,
     this.notifyUrl,
+    this.paymentId,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +22,7 @@ class MerchantDetails {
       if (returnUrl != null) "return_url": returnUrl,
       if (cancelUrl != null) "cancel_url": cancelUrl,
       if (notifyUrl != null) "notify_url": notifyUrl,
+      if (paymentId != null) "m_payment_id": paymentId,
     };
   }
 }
