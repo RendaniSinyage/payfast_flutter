@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart' as crypto;
-import 'package:flutter/foundation.dart';
-//juvoP
+
 class SignatureService {
   /// Creates a PayFast-compatible signature for payment parameters
   ///
@@ -32,14 +31,8 @@ class SignatureService {
     final signatureString = passphrase.isNotEmpty
         ? '$parameterString&passphrase=$passphrase'
         : parameterString;
-        
-    // Debug output
-    debugPrint('PayFast signature string: $signatureString');
 
     // Generate MD5 hash
-    final signature = crypto.md5.convert(utf8.encode(signatureString)).toString();
-    debugPrint('PayFast generated signature: $signature');
-    
-    return signature;
+    return crypto.md5.convert(utf8.encode(signatureString)).toString();
   }
 }
