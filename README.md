@@ -32,6 +32,27 @@ var payfast = Payfast(
 ### Simple payment
 
 ```dart
+final paymentUrl = PayFastService.enhancedPayment(
+          passphrase: AppConstants.passphrase,
+          merchantId: AppConstants.merchantId,
+          merchantKey: AppConstants.merchantKey,
+          production: data["sandbox"] != 1,
+          amount: data["amount"].toString(),
+          itemName: data["item_name"] ?? 'Order',
+          notifyUrl: data["notify_url"],
+          cancelUrl: data["cancel_url"],
+          returnUrl: data["return_url"],
+          paymentId: res.data["data"]["id"].toString(),
+          email: email,
+          phone: phone,
+          firstName: firstName,
+          lastName: lastName,
+        );
+```
+
+### enhanced payment
+
+```dart
 payfast.createSimplePayment(amount: '100', itemName: 'TV');
 print(payfast.generateURL());
 ```
