@@ -14,76 +14,135 @@ class Payfast {
 
   RecurringBilling? recurringBilling;
   SimpleBilling? simpleBilling;
-  // TokenizationBilling? tokenizationBilling;
   MerchantDetails merchantDetails;
+  
+  // Added customer details properties
+  String? emailAddress;
+  String? cellNumber;
+  String? nameFirst;
+  String? nameLast;
 
   Payfast({
     required this.passphrase,
     required this.paymentType,
     required this.production,
     required this.merchantDetails,
+    this.emailAddress,
+    this.cellNumber,
+    this.nameFirst,
+    this.nameLast,
   });
 
   String generateURL() {
     Map<String, dynamic> queryParameters = {};
-    //Simple Payment
+    
+    // Simple Payment
     if (paymentType == PaymentType.simplePayment) {
-      Map<String, dynamic> simpleQueryParameters = {
-        ...merchantDetails.toMap(),
-        'amount': simpleBilling?.amount,
-        'item_name': simpleBilling?.itemName,
-      };
-
-      queryParameters = simpleQueryParameters;
-    }
-    //Recurring Billing
-    else if (paymentType == PaymentType.recurringBilling) {
-      //Subscription
-      if (recurringBilling?.recurringPaymentType ==
-          RecurringPaymentType.subscription) {
-        Map<String, dynamic> recurringSubscriptionQueryParameters = {
-          ...merchantDetails.toMap(),
-          'amount': recurringBilling?.subscriptionPayment?.amount,
-          'item_name': recurringBilling?.subscriptionPayment?.itemName,
-          'subscription_type':
-              recurringBilling?.subscriptionPayment?.subscriptionsType,
-          'billing_date': recurringBilling?.subscriptionPayment?.billingDate,
-          'recurring_amount':
-              recurringBilling?.subscriptionPayment?.recurringAmount,
-          'frequency': recurringBilling?.subscriptionPayment?.frequency,
-          'cycles': recurringBilling?.subscriptionPayment?.cycles,
-        };
-
-        queryParameters = recurringSubscriptionQueryParameters;
+      // Add merchant details first
+      queryParameters.addAll(merchantDetails.toMap());
+      
+      // Add payment details
+      queryParameters['amount'] = simpleBilling?.amount;
+      queryParameters['item_name'] = simpleBilling?.itemName;
+      
+      // Add customer details if provided
+      if (emailAddress != null && emailAddress!.isNotEmpty) {
+        queryParameters['email_address'] = emailAddress;
       }
-      //Tokenization
-      else if (recurringBilling?.recurringPaymentType ==
-          RecurringPaymentType.tokenization) {
-        Map<String, dynamic> recurringTokenizationQueryParameters = {
-          ...merchantDetails.toMap(),
-          'amount': '250',
-          'item_name': 'Netflix',
-          'subscription_type':
-              recurringBilling?.tokenizationBilling?.subscriptionType,
-        };
 
-        queryParameters = recurringTokenizationQueryParameters;
+      if (cellNumber != null && cellNumber!.isNotEmpty) {
+        queryParameters['cell_number'] = cellNumber;
+      }
+
+      if (nameFirst != null && nameFirst!.isNotEmpty) {
+        queryParameters['name_first'] = nameFirst;
+      }
+
+      if (nameLast != null && nameLast!.isNotEmpty) {
+        queryParameters['name_last'] = nameLast;
+      }
+    }
+    // Recurring Billing
+    else if (paymentType == PaymentType.recurringBilling) {
+      // Subscription
+      if (recurringBilling?.recurringPaymentType == RecurringPaymentType.subscription) {
+        // Add merchant details first
+        queryParameters.addAll(merchantDetails.toMap());
+        
+        // Add subscription details
+        queryParameters['amount'] = recurringBilling?.subscriptionPayment?.amount;
+        queryParameters['item_name'] = recurringBilling?.subscriptionPayment?.itemName;
+        queryParameters['subscription_type'] = recurringBilling?.subscriptionPayment?.subscriptionsType;
+        queryParameters['billing_date'] = recurringBilling?.subscriptionPayment?.billingDate;
+        queryParameters['recurring_amount'] = recurringBilling?.subscriptionPayment?.recurringAmount;
+        queryParameters['frequency'] = recurringBilling?.subscriptionPayment?.frequency;
+        queryParameters['cycles'] = recurringBilling?.subscriptionPayment?.cycles;
+        
+        // Add customer details if provided
+        if (emailAddress != null && emailAddress!.isNotEmpty) {
+          queryParameters['email_address'] = emailAddress;
+        }
+
+        if (cellNumber != null && cellNumber!.isNotEmpty) {
+          queryParameters['cell_number'] = cellNumber;
+        }
+
+        if (nameFirst != null && nameFirst!.isNotEmpty) {
+          queryParameters['name_first'] = nameFirst;
+        }
+
+        if (nameLast != null && nameLast!.isNotEmpty) {
+          queryParameters['name_last'] = nameLast;
+        }
+      }
+      // Tokenization
+      else if (recurringBilling?.recurringPaymentType == RecurringPaymentType.tokenization) {
+        // Add merchant details first
+        queryParameters.addAll(merchantDetails.toMap());
+        
+        // Add tokenization details
+        queryParameters['amount'] = recurringBilling?.tokenizationBilling?.amount ?? '250';
+        queryParameters['item_name'] = recurringBilling?.tokenizationBilling?.itemName ?? 'Netflix';
+        queryParameters['subscription_type'] = recurringBilling?.tokenizationBilling?.subscriptionType;
+        
+        // Add customer details if provided
+        if (emailAddress != null && emailAddress!.isNotEmpty) {
+          queryParameters['email_address'] = emailAddress;
+        }
+
+        if (cellNumber != null && cellNumber!.isNotEmpty) {
+          queryParameters['cell_number'] = cellNumber;
+        }
+
+        if (nameFirst != null && nameFirst!.isNotEmpty) {
+          queryParameters['name_first'] = nameFirst;
+        }
+
+        if (nameLast != null && nameLast!.isNotEmpty) {
+          queryParameters['name_last'] = nameLast;
+        }
       } else {
         throw Exception("Payment type not selected");
       }
     }
 
+    // Remove null values
+    queryParameters.removeWhere((key, value) => value == null || value.toString().isEmpty);
+    
+    // Calculate signature
+    String signature = SignatureService.createSignature(queryParameters, passphrase);
+    
+    // Build the URL with proper host
+    final host = production ? 'payfast.co.za' : 'sandbox.payfast.co.za';
+    
     return Uri.decodeComponent(
       Uri(
         scheme: 'https',
-        host: '${production ? 'payfast' : 'sandbox.payfast'}.co.za',
+        host: host,
         path: '/eng/process',
         queryParameters: {
           ...queryParameters,
-          'signature': SignatureService.createSignature(
-            queryParameters,
-            passphrase,
-          ),
+          'signature': signature,
         },
       ).toString(),
     );
@@ -127,7 +186,7 @@ class Payfast {
     String? itemName,
   ]) {
     recurringBilling!.tokenizationBilling = TokenizationBilling(
-      amount.toString(),
+      amount?.toString(),
       itemName,
     );
   }
@@ -144,11 +203,9 @@ class Payfast {
 
     Map<String, dynamic> signatureEntry = {
       'signature': SignatureService.createSignature(
-          recurringTokenizationQueryParameters, 'JoshuaMunstermann'),
+          recurringTokenizationQueryParameters, passphrase),
     };
 
     recurringTokenizationQueryParameters.addEntries(signatureEntry.entries);
-
-    print(recurringTokenizationQueryParameters);
   }
 }
