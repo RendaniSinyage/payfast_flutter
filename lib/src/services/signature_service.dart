@@ -5,64 +5,41 @@ import 'package:flutter/foundation.dart';
 class SignatureService {
   /// Creates a signature for PayFast payment parameters
   ///
-  /// The signature is created by following PayFast's official documentation:
-  /// 1. Concatenate parameters in the order they appear in the attributes description
-  /// 2. URL encode values with uppercase hex values and spaces as +
-  /// 3. Add the passphrase
-  /// 4. Generate an MD5 hash
+  /// The signature is created by:
+  /// 1. Sorting all parameters alphabetically by key
+  /// 2. Concatenating all parameter key-value pairs with & between each pair
+  /// 3. Appending the passphrase with a leading &
+  /// 4. Generating an MD5 hash of the resulting string
   static String createSignature(Map<String, dynamic> queryParameters, String passphrase) {
-    // Create parameter string
-    final StringBuffer pfOutput = StringBuffer();
+    // Create a copy of the parameters to avoid modifying the original
+    final params = Map<String, String>.from(queryParameters.map(
+      (key, value) => MapEntry(key, value?.toString() ?? '')
+    ));
     
-    // Convert all values to strings and filter out empty values
-    final Map<String, String> cleanParams = {};
-    queryParameters.forEach((key, value) {
-      if (value != null && value.toString().isNotEmpty) {
-        cleanParams[key] = value.toString().trim();
-      }
-    });
+    // Filter out null values and empty strings
+    params.removeWhere((key, value) => value == null || value.isEmpty);
     
-    // Add parameters to output string
-    cleanParams.forEach((key, value) {
-      pfOutput.write('$key=${_customUrlEncode(value)}&');
-    });
+    // Sort keys alphabetically
+    final sortedKeys = params.keys.toList()..sort();
     
-    // Remove last ampersand
-    String paramString = pfOutput.toString();
-    if (paramString.endsWith('&')) {
-      paramString = paramString.substring(0, paramString.length - 1);
-    }
+    // Build parameter string
+    final parameterString = sortedKeys.map((key) {
+      final value = params[key]!;
+      return '$key=$value';
+    }).join('&');
     
-    // Add passphrase if provided
-    if (passphrase.isNotEmpty) {
-      paramString += '&passphrase=${_customUrlEncode(passphrase)}';
-    }
+    // Add passphrase
+    final signatureString = passphrase.isNotEmpty 
+        ? '$parameterString&passphrase=$passphrase'
+        : parameterString;
     
     // Debug output to assist with troubleshooting
-    debugPrint('PayFast signature string: $paramString');
+    debugPrint('PayFast signature string: $signatureString');
     
     // Generate MD5 hash
-    final signature = crypto.md5.convert(utf8.encode(paramString)).toString();
+    final signature = crypto.md5.convert(utf8.encode(signatureString)).toString();
     debugPrint('PayFast generated signature: $signature');
     
     return signature;
-  }
-  
-  /// Custom URL encode function to match PayFast's requirements:
-  /// - Uppercase hexadecimal values
-  /// - Spaces as +
-  static String _customUrlEncode(String value) {
-    // First do standard encoding
-    String encoded = Uri.encodeComponent(value);
-    
-    // Replace lowercase hex with uppercase
-    encoded = encoded.replaceAllMapped(RegExp(r'%[0-9a-f]{2}'), (match) {
-      return match.group(0)!.toUpperCase();
-    });
-    
-    // Replace %20 with +
-    encoded = encoded.replaceAll('%20', '+');
-    
-    return encoded;
   }
 }
