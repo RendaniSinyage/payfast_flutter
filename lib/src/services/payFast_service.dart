@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart';
 
 /// PayFast service based on official documentation
+/// Enhanced to support tokenization and other advanced features
 class PayFastService {
   /// Generates a PayFast payment URL with proper signature
   ///
@@ -25,6 +26,13 @@ class PayFastService {
     String? phone,
     String? firstName,
     String? lastName,
+    String? paymentMethod,
+    String? subscriptionType,
+    String? customStr1,
+    String? customStr2,
+    String? customStr3,
+    String? customInt1,
+    String? customInt2,
   }) {
     // Create the parameters map in the correct order as per PayFast docs
     // 1. Merchant details
@@ -69,6 +77,38 @@ class PayFastService {
 
     params['amount'] = amount;
     params['item_name'] = itemName;
+
+    // 4. Custom fields for tracking and additional data
+    if (customStr1 != null && customStr1.isNotEmpty) {
+      params['custom_str1'] = customStr1;
+    }
+
+    if (customStr2 != null && customStr2.isNotEmpty) {
+      params['custom_str2'] = customStr2;
+    }
+
+    if (customStr3 != null && customStr3.isNotEmpty) {
+      params['custom_str3'] = customStr3;
+    }
+
+    if (customInt1 != null && customInt1.isNotEmpty) {
+      params['custom_int1'] = customInt1;
+    }
+
+    if (customInt2 != null && customInt2.isNotEmpty) {
+      params['custom_int2'] = customInt2;
+    }
+
+    // 5. Advanced features
+    // Only add payment_method if specified
+    if (paymentMethod != null && paymentMethod.isNotEmpty) {
+      params['payment_method'] = paymentMethod;
+    }
+
+    // Add subscription_type for tokenization
+    if (subscriptionType != null && subscriptionType.isNotEmpty) {
+      params['subscription_type'] = subscriptionType;
+    }
 
     // Calculate signature according to PayFast documentation
     final signature = _createSignaturePerDocumentation(params, passphrase);
@@ -143,7 +183,7 @@ class PayFastService {
     return encoded;
   }
 
-  /// Helper method for enhanced payments
+  /// Helper method for enhanced payments with tokenization support
   static String enhancedPayment({
     required String passphrase,
     required String merchantId,
@@ -159,6 +199,13 @@ class PayFastService {
     String? phone,
     String? firstName,
     String? lastName,
+    bool forceCardPayment = false,
+    bool enableTokenization = false,
+    String? customStr1,
+    String? customStr2,
+    String? customStr3,
+    String? customInt1,
+    String? customInt2,
   }) {
     return generatePaymentUrl(
       merchantId: merchantId,
@@ -168,13 +215,48 @@ class PayFastService {
       amount: amount,
       itemName: itemName,
       notifyUrl: notifyUrl,
-      returnUrl: returnUrl,
+      // Add token capture flag to return URL to help with token detection
+      returnUrl: returnUrl != null ? '$returnUrl&capture_token=true' : null,
       cancelUrl: cancelUrl,
       paymentId: paymentId,
       email: email,
       phone: phone,
       firstName: firstName,
       lastName: lastName,
+      // Force credit card payment if requested
+      paymentMethod: forceCardPayment ? 'cc' : null,
+      // Enable tokenization if requested (type 2 is for tokenized payments)
+      subscriptionType: enableTokenization ? '2' : null,
+      // Pass through custom parameters for tracking
+      customStr1: customStr1,
+      customStr2: enableTokenization ? 'tokenize' : customStr2, // Mark tokenization requests
+      customStr3: customStr3,
+      customInt1: customInt1,
+      customInt2: customInt2,
     );
+  }
+
+  /// Generate URL for payment using a saved token
+  static String generateTokenPaymentUrl({
+    required String merchantId,
+    required String merchantKey,
+    required String passphrase,
+    required bool production,
+    required String amount,
+    required String itemName,
+    required String token,
+    String? notifyUrl,
+    String? returnUrl,
+    String? cancelUrl,
+    String? paymentId,
+  }) {
+    // Create API endpoint for token payment
+    final host = production ? 'api.payfast.co.za' : 'sandbox.payfast.co.za';
+
+    // Calculate timestamp for the request
+    final timestamp = DateTime.now().toUtc().toIso8601String();
+
+    // Build the URL for Recurring API (token payment)
+    return 'https://$host/subscriptions/$token/adhoc';
   }
 }
